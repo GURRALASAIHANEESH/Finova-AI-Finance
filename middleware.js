@@ -45,9 +45,11 @@ export default createMiddleware(aj, clerk);
 
 export const config = {
   matcher: [
-    // Skip Next.js internals and all static files, unless found in search params
+    "/", // root path
+    "/dashboard(.*)",
+    "/account(.*)",
+    "/transaction(.*)",
     "/((?!_next|static|favicon.ico|public).*)",
-    // Always run for API routes
     "/(api|trpc)(.*)",
   ],
 };
