@@ -1,12 +1,11 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-
 import { createMiddleware as createArcjetMiddleware, detectBot, shield } from "@arcjet/next";
 import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
 
 // Arcjet configuration
 const arcjetMiddleware = createArcjetMiddleware({
-  key: process.env.ARCJET_KEY || "", // Ensure this is defined in your .env
+  key: process.env.ARCJET_KEY || "", // Ensure ARCJET_KEY is set in .env or Vercel
   rules: [
     shield({ mode: "LIVE" }),
     detectBot({
@@ -16,7 +15,7 @@ const arcjetMiddleware = createArcjetMiddleware({
   ],
 });
 
-// Clerk route matcher
+// Clerk route matcher for protected routes
 const isProtectedRoute = createRouteMatcher([
   "/",
   "/dashboard(.*)",
@@ -24,15 +23,27 @@ const isProtectedRoute = createRouteMatcher([
   "/transaction(.*)",
 ]);
 
-// Final middleware function
+// Middleware function
 export async function middleware(req: NextRequest) {
-  // First pass through Arcjet
-  const arcjetResult = await arcjetMiddleware(req);
-  if (arcjetResult) return arcjetResult;
+  // Skip middleware for favicon.ico to avoid unnecessary processing
+  if (req.nextUrl.pathname === "/favicon.ico") {
+    return NextResponse.next();
+  }
 
-  // Then pass through Clerk for protected routes
+  // Apply Arcjet middleware
+  const arcjetResult = await arcjetMiddleware(req);
+  if (arcjetResult) {
+    console.log("Arcjet blocked request:", arcjetResult);
+    return arcjetResult;
+  }
+
+  // Apply Clerk middleware for protected routes
   if (isProtectedRoute(req)) {
-    return clerkMiddleware(req);
+    return clerkMiddleware((auth, req) => {
+      console.log("Clerk middleware triggered for:", req.nextUrl.pathname);
+      auth().protect(); // Ensure authentication for protected routes
+      return NextResponse.next();
+    })(req);
   }
 
   return NextResponse.next();
@@ -41,11 +52,10 @@ export async function middleware(req: NextRequest) {
 // Routes to match
 export const config = {
   matcher: [
-    "/", 
-    "/dashboard(.*)", 
-    "/account(.*)", 
-    "/transaction(.*)", 
-    "/((?!_next|static|.*\\..*).*)", 
-    "/favicon.ico"
+    "/",
+    "/dashboard(.*)",
+    "/account(.*)",
+    "/transaction(.*)",
+    "/((?!_next|static|.*\\.(?:ico|png|jpg|jpeg|svg|css|js)).*)",
   ],
 };
