@@ -1,9 +1,12 @@
-import arcjet, { createMiddleware as createArcjetMiddleware, detectBot, shield } from "@arcjet/next";
+import { NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
+
+import { createMiddleware as createArcjetMiddleware, detectBot, shield } from "@arcjet/next";
 import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
 
-// Setup Arcjet middleware
-const arcjetMiddleware = arcjet({
-  key: process.env.ARCJET_KEY, // Make sure this is set in .env.local
+// Arcjet configuration
+const arcjetMiddleware = createArcjetMiddleware({
+  key: process.env.ARCJET_KEY || "", // Ensure this is defined in your .env
   rules: [
     shield({ mode: "LIVE" }),
     detectBot({
@@ -13,7 +16,7 @@ const arcjetMiddleware = arcjet({
   ],
 });
 
-// Define protected routes
+// Clerk route matcher
 const isProtectedRoute = createRouteMatcher([
   "/",
   "/dashboard(.*)",
@@ -21,19 +24,21 @@ const isProtectedRoute = createRouteMatcher([
   "/transaction(.*)",
 ]);
 
-// Combine middlewares: first Arcjet, then Clerk
-const middleware = createArcjetMiddleware((request) => {
-  if (isProtectedRoute(request)) {
-    return clerkMiddleware(request);
+// Final middleware function
+export async function middleware(req: NextRequest) {
+  // First pass through Arcjet
+  const arcjetResult = await arcjetMiddleware(req);
+  if (arcjetResult) return arcjetResult;
+
+  // Then pass through Clerk for protected routes
+  if (isProtectedRoute(req)) {
+    return clerkMiddleware(req);
   }
 
-  return request; // Continue if not protected
-});
+  return NextResponse.next();
+}
 
-// Export final middleware
-export default middleware;
-
-// Define routes to match for middleware
+// Routes to match
 export const config = {
   matcher: [
     "/", 
