@@ -1,8 +1,7 @@
 import { authMiddleware } from "@clerk/nextjs";
 import { arcjet, detectBot, shield } from "@arcjet/next";
-import { NextResponse } from "next/server";
 
-// Combine Arcjet middleware
+// Define Arcjet middleware
 const arcjetMiddleware = arcjet({
   key: process.env.ARCJET_KEY,
   rules: [
@@ -14,16 +13,19 @@ const arcjetMiddleware = arcjet({
   ],
 });
 
-// Export the final middleware handler
-export default arcjetMiddleware(authMiddleware());
+// Initialize Clerk middleware
+const clerk = authMiddleware();
 
-// Define what routes need middleware (Clerk + Arcjet will apply to these)
+export default arcjetMiddleware(clerk);
+
+// Match all routes except static/_next etc., include favicon explicitly
 export const config = {
   matcher: [
     "/",
     "/dashboard(.*)",
     "/account(.*)",
     "/transaction(.*)",
+    "/favicon.ico",
     "/((?!_next|static|.*\\..*).*)",
   ],
 };
