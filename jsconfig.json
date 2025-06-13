@@ -1,7 +1,16 @@
 {
   "compilerOptions": {
+    "baseUrl": ".",
     "paths": {
-      "@/*": ["./*"]
+      "@/*": ["./*"],
+      "@/components/*": ["components/*"],
+      "@/lib/*": ["lib/*"],
+      "@/app/*": ["app/*"],
+      "@/hooks/*": ["hooks/*"],
+      "@/data/*": ["data/*"],
+      "@/actions/*": ["actions/*"],
+      "@/emails/*": ["emails/*"]   // <-- Add this line
     }
-  }
+  },
+  "exclude": ["node_modules", ".next"]
 }

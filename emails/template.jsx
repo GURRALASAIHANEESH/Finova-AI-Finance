@@ -12,7 +12,7 @@ import {
 // Dummy data for preview
 const PREVIEW_DATA = {
   monthlyReport: {
-    userName: "John Doe",
+    userName: "Haneesh Patel",
     type: "monthly-report",
     data: {
       month: "December",
@@ -30,12 +30,12 @@ const PREVIEW_DATA = {
       insights: [
         "Your housing expenses are 43% of your total spending - consider reviewing your housing costs.",
         "Great job keeping entertainment expenses under control this month!",
-        "Setting up automatic savings could help you save 20% more of your income.",
+        "Setting up automatic savings could help you save 20% of your income.",
       ],
     },
   },
   budgetAlert: {
-    userName: "John Doe",
+    userName: "Haneesh Patel",
     type: "budget-alert",
     data: {
       percentageUsed: 85,
@@ -46,11 +46,68 @@ const PREVIEW_DATA = {
 };
 
 export default function EmailTemplate({
-  userName = "",
-  type = "monthly-report",
-  data = {},
+  userName,
+  type,
+  data,
 }) {
+  // Fallback to preview data if required fields are missing
+  if (
+    !userName ||
+    !data ||
+    !data.month ||
+    !data.stats ||
+    data.stats.totalIncome == null ||
+    data.stats.totalExpenses == null
+  ) {
+    const preview = PREVIEW_DATA.monthlyReport;
+    userName = preview.userName;
+    type = preview.type;
+    data = preview.data;
+  }
+
+  console.log("Props received:", { userName, type, data });
+
+  if (!["monthly-report", "budget-alert"].includes(type)) {
+    console.log("Invalid email type:", type);
+    return (
+      <Html>
+        <Head />
+        <Preview>Error</Preview>
+        <Body style={styles.body}>
+          <Container style={styles.container}>
+            <Heading style={styles.title}>Invalid Email Type</Heading>
+            <Text style={styles.text}>The email type provided is not supported.</Text>
+          </Container>
+        </Body>
+      </Html>
+    );
+  }
+
   if (type === "monthly-report") {
+    const missingFields = [];
+    if (!userName) missingFields.push("userName");
+    if (!data?.month) missingFields.push("data.month");
+    if (!data?.stats?.totalIncome) missingFields.push("data.stats.totalIncome");
+    if (!data?.stats?.totalExpenses) missingFields.push("data.stats.totalExpenses");
+
+    if (missingFields.length > 0) {
+      console.log(`Missing fields for monthly-report: ${missingFields.join(", ")}`);
+      return (
+        <Html>
+          <Head />
+          <Preview>Error</Preview>
+          <Body style={styles.body}>
+            <Container style={styles.container}>
+              <Heading style={styles.title}>Monthly Financial Report</Heading>
+              <Text style={styles.text}>
+                Unable to generate report. Missing: {missingFields.join(", ")}. Please check your data source or contact support.
+              </Text>
+            </Container>
+          </Body>
+        </Html>
+      );
+    }
+
     return (
       <Html>
         <Head />
@@ -58,59 +115,53 @@ export default function EmailTemplate({
         <Body style={styles.body}>
           <Container style={styles.container}>
             <Heading style={styles.title}>Monthly Financial Report</Heading>
-
             <Text style={styles.text}>Hello {userName},</Text>
             <Text style={styles.text}>
-              Here&rsquo;s your financial summary for {data?.month}:
+              Here’s your financial summary for {data.month}:
             </Text>
 
-            {/* Main Stats */}
             <Section style={styles.statsContainer}>
               <div style={styles.stat}>
                 <Text style={styles.text}>Total Income</Text>
-                <Text style={styles.heading}>${data?.stats.totalIncome}</Text>
+                <Text style={styles.heading}>${data.stats.totalIncome.toFixed(2)}</Text>
               </div>
               <div style={styles.stat}>
                 <Text style={styles.text}>Total Expenses</Text>
-                <Text style={styles.heading}>${data?.stats.totalExpenses}</Text>
+                <Text style={styles.heading}>${data.stats.totalExpenses.toFixed(2)}</Text>
               </div>
               <div style={styles.stat}>
                 <Text style={styles.text}>Net</Text>
                 <Text style={styles.heading}>
-                  ${data?.stats.totalIncome - data?.stats.totalExpenses}
+                  ${(data.stats.totalIncome - data.stats.totalExpenses).toFixed(2)}
                 </Text>
               </div>
             </Section>
 
-            {/* Category Breakdown */}
-            {data?.stats?.byCategory && (
+            {data.stats.byCategory && (
               <Section style={styles.section}>
                 <Heading style={styles.heading}>Expenses by Category</Heading>
-                {Object.entries(data?.stats.byCategory).map(
-                  ([category, amount]) => (
-                    <div key={category} style={styles.row}>
-                      <Text style={styles.text}>{category}</Text>
-                      <Text style={styles.text}>${amount}</Text>
-                    </div>
-                  )
-                )}
+                {Object.entries(data.stats.byCategory).map(([category, amount]) => (
+                  <div key={category} style={styles.row}>
+                    <Text style={styles.text}>
+                      {category.charAt(0).toUpperCase() + category.slice(1)}
+                    </Text>
+                    <Text style={styles.text}>${amount.toFixed(2)}</Text>
+                  </div>
+                ))}
               </Section>
             )}
 
-            {/* AI Insights */}
-            {data?.insights && (
+            {data.insights && data.insights.length > 0 && (
               <Section style={styles.section}>
                 <Heading style={styles.heading}>Welth Insights</Heading>
                 {data.insights.map((insight, index) => (
-                  <Text key={index} style={styles.text}>
-                    • {insight}
-                  </Text>
+                  <Text key={index} style={styles.text}>• {insight}</Text>
                 ))}
               </Section>
             )}
 
             <Text style={styles.footer}>
-              Thank you for using Welth. Keep tracking your finances for better
+              Thank you for using Finova. Keep tracking your finances for better
               financial health!
             </Text>
           </Container>
@@ -120,6 +171,29 @@ export default function EmailTemplate({
   }
 
   if (type === "budget-alert") {
+    const missingFields = [];
+    if (!userName) missingFields.push("userName");
+    if (!data?.budgetAmount) missingFields.push("data.budgetAmount");
+    if (!data?.totalExpenses) missingFields.push("data.totalExpenses");
+
+    if (missingFields.length > 0) {
+      console.log(`Missing fields for budget-alert: ${missingFields.join(", ")}`);
+      return (
+        <Html>
+          <Head />
+          <Preview>Error</Preview>
+          <Body style={styles.body}>
+            <Container style={styles.container}>
+              <Heading style={styles.title}>Budget Alert</Heading>
+              <Text style={styles.text}>
+                Unable to generate budget alert. Missing: {missingFields.join(", ")}.
+              </Text>
+            </Container>
+          </Body>
+        </Html>
+      );
+    }
+
     return (
       <Html>
         <Head />
@@ -129,22 +203,23 @@ export default function EmailTemplate({
             <Heading style={styles.title}>Budget Alert</Heading>
             <Text style={styles.text}>Hello {userName},</Text>
             <Text style={styles.text}>
-              You&rsquo;ve used {data?.percentageUsed.toFixed(1)}% of your
-              monthly budget.
+              You’ve used{" "}
+              {data.percentageUsed != null ? data.percentageUsed.toFixed(1) : "--"}% of
+              your monthly budget.
             </Text>
             <Section style={styles.statsContainer}>
               <div style={styles.stat}>
                 <Text style={styles.text}>Budget Amount</Text>
-                <Text style={styles.heading}>${data?.budgetAmount}</Text>
+                <Text style={styles.heading}>${data.budgetAmount.toFixed(2)}</Text>
               </div>
               <div style={styles.stat}>
                 <Text style={styles.text}>Spent So Far</Text>
-                <Text style={styles.heading}>${data?.totalExpenses}</Text>
+                <Text style={styles.heading}>${data.totalExpenses.toFixed(2)}</Text>
               </div>
               <div style={styles.stat}>
                 <Text style={styles.text}>Remaining</Text>
                 <Text style={styles.heading}>
-                  ${data?.budgetAmount - data?.totalExpenses}
+                  ${(data.budgetAmount - data.totalExpenses).toFixed(2)}
                 </Text>
               </div>
             </Section>
@@ -154,6 +229,12 @@ export default function EmailTemplate({
     );
   }
 }
+
+export const EmailTemplateDemo = () => {
+  const { userName, type, data } = PREVIEW_DATA.monthlyReport;
+  console.log("EmailTemplateDemo props:", { userName, type, data });
+  return <EmailTemplate userName={userName} type={type} data={data} />;
+};
 
 const styles = {
   body: {
@@ -166,6 +247,8 @@ const styles = {
     padding: "20px",
     borderRadius: "5px",
     boxShadow: "0 2px 4px rgba(0, 0, 0, 0.1)",
+    maxWidth: "600px",
+    width: "100%",
   },
   title: {
     color: "#1f2937",
@@ -212,7 +295,7 @@ const styles = {
     borderBottom: "1px solid #e5e7eb",
   },
   footer: {
-    color: "#6b7280",
+    color: "#4b5563",
     fontSize: "14px",
     textAlign: "center",
     marginTop: "32px",

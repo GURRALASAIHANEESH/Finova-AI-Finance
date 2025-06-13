@@ -1,7 +1,7 @@
 "use server";
 
 import { auth } from "@clerk/nextjs/server";
-import { db } from "@/lib/prisma";
+import db from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import aj from "@/lib/arcjet";
@@ -17,6 +17,10 @@ const serializeAmount = (obj) => ({
 // Create Transaction
 export async function createTransaction(data) {
   try {
+    // Defensive conversion for amount and date
+    const amount = typeof data.amount === "string" ? parseFloat(data.amount) : data.amount;
+    const date = typeof data.date === "string" ? new Date(data.date) : data.date;
+
     const { userId } = await auth();
     if (!userId) throw new Error("Unauthorized");
 
@@ -54,11 +58,11 @@ export async function createTransaction(data) {
       throw new Error("User not found");
     }
 
+    // Fetch the account using only the unique id
     const account = await db.account.findUnique({
       where: {
         id: data.accountId,
-        userId: user.id,
-      },
+      }
     });
 
     if (!account) {
@@ -66,7 +70,7 @@ export async function createTransaction(data) {
     }
 
     // Calculate new balance
-    const balanceChange = data.type === "EXPENSE" ? -data.amount : data.amount;
+    const balanceChange = data.type === "EXPENSE" ? -amount : amount;
     const newBalance = account.balance.toNumber() + balanceChange;
 
     // Create transaction and update account balance
@@ -74,11 +78,14 @@ export async function createTransaction(data) {
       const newTransaction = await tx.transaction.create({
         data: {
           ...data,
+          amount,
+          date,
           userId: user.id,
           nextRecurringDate:
             data.isRecurring && data.recurringInterval
-              ? calculateNextRecurringDate(data.date, data.recurringInterval)
+              ? calculateNextRecurringDate(date, data.recurringInterval)
               : null,
+          category: data.category, // ensure this is present and valid
         },
       });
 
@@ -145,6 +152,15 @@ export async function updateTransaction(id, data) {
 
     if (!originalTransaction) throw new Error("Transaction not found");
 
+    // Defensive conversion for amount and date
+    const amount = typeof data.amount === "string" ? parseFloat(data.amount) : data.amount;
+    const date =
+      typeof data.date === "string"
+        ? new Date(data.date).toISOString()
+        : data.date instanceof Date
+        ? data.date.toISOString()
+        : data.date;
+
     // Calculate balance changes
     const oldBalanceChange =
       originalTransaction.type === "EXPENSE"
@@ -152,7 +168,7 @@ export async function updateTransaction(id, data) {
         : originalTransaction.amount.toNumber();
 
     const newBalanceChange =
-      data.type === "EXPENSE" ? -data.amount : data.amount;
+      data.type === "EXPENSE" ? -amount : amount;
 
     const netBalanceChange = newBalanceChange - oldBalanceChange;
 
@@ -165,9 +181,11 @@ export async function updateTransaction(id, data) {
         },
         data: {
           ...data,
+          amount,
+          date, // <-- now always ISO string
           nextRecurringDate:
             data.isRecurring && data.recurringInterval
-              ? calculateNextRecurringDate(data.date, data.recurringInterval)
+              ? calculateNextRecurringDate(date, data.recurringInterval)
               : null,
         },
       });

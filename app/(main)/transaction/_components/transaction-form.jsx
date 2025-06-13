@@ -55,7 +55,7 @@ export function AddTransactionForm({
       editMode && initialData
         ? {
             type: initialData.type,
-            amount: initialData.amount.toString(),
+            amount: initialData.amount,
             description: initialData.description,
             accountId: initialData.accountId,
             category: initialData.category,
@@ -67,13 +67,22 @@ export function AddTransactionForm({
           }
         : {
             type: "EXPENSE",
-            amount: "",
+            amount: 0,
             description: "",
             accountId: accounts.find((ac) => ac.isDefault)?.id,
             date: new Date(),
             isRecurring: false,
           },
   });
+
+  useEffect(() => {
+    if (!editMode) {
+      const defaultAccountId = accounts.find((ac) => ac.isDefault)?.id;
+      if (defaultAccountId) {
+        setValue("accountId", defaultAccountId);
+      }
+    }
+  }, [accounts, editMode, setValue]);
 
   const {
     loading: transactionLoading,
@@ -82,9 +91,17 @@ export function AddTransactionForm({
   } = useFetch(editMode ? updateTransaction : createTransaction);
 
   const onSubmit = (data) => {
+    // Ensure data.date is a Date object before formatting
+    let formattedDate = data.date;
+    if (data.date instanceof Date) {
+      // Format the Date object into a YYYY-MM-DD string
+      formattedDate = data.date.toISOString().split("T")[0];
+    }
+
     const formData = {
       ...data,
       amount: parseFloat(data.amount),
+      date: formattedDate, // Add the formatted date here
     };
 
     if (editMode) {
@@ -130,6 +147,17 @@ export function AddTransactionForm({
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+      {/* Title */}
+      <div className="flex justify-center md:justify-normal mb-8">
+        <h1
+          className={`text-5xl gradient-title ${
+            editMode ? "text-emerald-600" : "text-indigo-600"
+          }`}
+        >
+          {editMode ? "Update Transaction" : "Add Transaction"}
+        </h1>
+      </div>
+
       {/* Receipt Scanner - Only show in create mode */}
       {!editMode && <ReceiptScanner onScanComplete={handleScanComplete} />}
 
@@ -161,7 +189,7 @@ export function AddTransactionForm({
             type="number"
             step="0.01"
             placeholder="0.00"
-            {...register("amount")}
+            {...register("amount", { valueAsNumber: true })}
           />
           {errors.amount && (
             <p className="text-sm text-red-500">{errors.amount.message}</p>
@@ -203,6 +231,7 @@ export function AddTransactionForm({
       <div className="space-y-2">
         <label className="text-sm font-medium">Category</label>
         <Select
+          {...register("category", { required: true })}
           onValueChange={(value) => setValue("category", value)}
           defaultValue={getValues("category")}
         >

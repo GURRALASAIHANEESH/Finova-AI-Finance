@@ -14,8 +14,8 @@ const Header = async () => {
       <nav className="container mx-auto px-4 py-4 flex items-center justify-between">
         <Link href="/">
           <Image
-            src={"/logo.png"}
-            alt="Welth Logo"
+            src={"/finova-logo.png"} // <-- your new logo filename
+            alt="Finova Logo"
             width={200}
             height={60}
             className="h-12 w-auto object-contain"
@@ -44,13 +44,13 @@ const Header = async () => {
               href="/dashboard"
               className="text-gray-600 hover:text-blue-600 flex items-center gap-2"
             >
-              <Button variant="outline">
+              <Button className="bg-green-600 text-white hover:bg-green-700 border-none">
                 <LayoutDashboard size={18} />
                 <span className="hidden md:inline">Dashboard</span>
               </Button>
             </Link>
             <a href="/transaction/create">
-              <Button className="flex items-center gap-2">
+              <Button className="bg-blue-600 text-white hover:bg-blue-700 border-none flex items-center gap-2">
                 <PenBox size={18} />
                 <span className="hidden md:inline">Add Transaction</span>
               </Button>
@@ -58,7 +58,9 @@ const Header = async () => {
           </SignedIn>
           <SignedOut>
             <SignInButton forceRedirectUrl="/dashboard">
-              <Button variant="outline">Login</Button>
+              <Button className="bg-gray-800 text-white hover:bg-gray-900 border-none">
+                Login
+              </Button>
             </SignInButton>
           </SignedOut>
           <SignedIn>

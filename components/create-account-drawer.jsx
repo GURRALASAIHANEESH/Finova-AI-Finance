@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Loader2 } from "lucide-react";
@@ -16,7 +16,7 @@ import {
   DrawerTrigger,
   DrawerClose,
 } from "@/components/ui/drawer";
-import { Input } from "@/components/ui/input";
+import { Input } from "@/components/ui/input"; // Make sure this import points to your corrected Input component
 import {
   Select,
   SelectContent,
@@ -30,6 +30,18 @@ import { accountSchema } from "@/app/lib/schema";
 
 export function CreateAccountDrawer({ children }) {
   const [open, setOpen] = useState(false);
+
+  // Memoize defaultValues
+  const defaultValues = useMemo(
+  () => ({
+    name: "",
+    type: "CHECKING", // Default to CHECKING, matches your enum
+    balance: 0,       // Default to 0, matches number type
+    isDefault: false,
+  }),
+  []
+);
+
   const {
     register,
     handleSubmit,
@@ -39,12 +51,7 @@ export function CreateAccountDrawer({ children }) {
     reset,
   } = useForm({
     resolver: zodResolver(accountSchema),
-    defaultValues: {
-      name: "",
-      type: "CURRENT",
-      balance: "",
-      isDefault: false,
-    },
+    defaultValues,
   });
 
   const {
@@ -55,14 +62,14 @@ export function CreateAccountDrawer({ children }) {
   } = useFetch(createAccount);
 
   const onSubmit = async (data) => {
-    await createAccountFn(data);
+    await createAccountFn(data); // This handles account creation
   };
 
   useEffect(() => {
     if (newAccount) {
       toast.success("Account created successfully");
-      reset();
-      setOpen(false);
+      reset(); // Resets the form
+      setOpen(false); // Closes the drawer
     }
   }, [newAccount, reset]);
 
@@ -75,9 +82,12 @@ export function CreateAccountDrawer({ children }) {
   return (
     <Drawer open={open} onOpenChange={setOpen}>
       <DrawerTrigger asChild>{children}</DrawerTrigger>
-      <DrawerContent>
+      <DrawerContent aria-describedby="drawer-desc">
         <DrawerHeader>
           <DrawerTitle>Create New Account</DrawerTitle>
+          <p id="drawer-desc" className="text-sm text-muted-foreground">
+            Fill the details to create a new bank account
+          </p>
         </DrawerHeader>
         <div className="px-4 pb-4">
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
@@ -113,8 +123,9 @@ export function CreateAccountDrawer({ children }) {
                   <SelectValue placeholder="Select type" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="CURRENT">Current</SelectItem>
+                  <SelectItem value="CHECKING">Checking</SelectItem>
                   <SelectItem value="SAVINGS">Savings</SelectItem>
+                  <SelectItem value="CREDIT">Credit</SelectItem>
                 </SelectContent>
               </Select>
               {errors.type && (
@@ -134,7 +145,7 @@ export function CreateAccountDrawer({ children }) {
                 type="number"
                 step="0.01"
                 placeholder="0.00"
-                {...register("balance")}
+                {...register("balance", { valueAsNumber: true })}
               />
               {errors.balance && (
                 <p className="text-sm text-red-500">{errors.balance.message}</p>
